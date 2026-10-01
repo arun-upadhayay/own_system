@@ -1,0 +1,40 @@
+@import 'tailwindcss';
+@import '@cp/ui/styles.css';
+
+/**
+ * Tailwind v4 theme bridge.
+ *
+ * The design tokens are CSS custom properties (ADR-021) so a theme switch is one
+ * attribute change on <html> rather than two compiled stylesheets. This block
+ * maps them to Tailwind utilities so `bg-surface-raised` resolves to the token
+ * and therefore follows the theme automatically.
+ */
+@theme inline {
+  --color-surface-page: var(--surface-page);
+  --color-surface-raised: var(--surface-raised);
+  --color-surface-overlay: var(--surface-overlay);
+  --color-surface-sunken: var(--surface-sunken);
+  --color-surface-hover: var(--surface-hover);
+  --color-surface-selected: var(--surface-selected);
+
+  --color-text-primary: var(--text-primary);
+  --color-text-secondary: var(--text-secondary);
+  --color-text-muted: var(--text-muted);
+  --color-text-link: var(--text-link);
+
+  --color-border-default: var(--border-default);
+  --color-border-strong: var(--border-strong);
+
+  --color-action-primary: var(--action-primary);
+
+  --font-sans: var(--font-sans);
+  --font-mono: var(--font-mono);
+
+  --radius-md: var(--radius-md);
+  --radius-lg: var(--radius-lg);
+  --radius-xl: var(--radius-xl);
+}
+
+/* Dark mode is driven by data-theme, not Tailwind's class strategy, because the
+   explicit toggle must beat the OS preference in both directions (02 §1.1). */
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));

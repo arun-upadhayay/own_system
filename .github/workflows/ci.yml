@@ -1,0 +1,116 @@
+name: CI
+
+# Gates that block a merge, per docs/architecture/17-deployment-architecture.md §6
+# and docs/design/10-accessibility.md §9.1. Accessibility and the architecture
+# guards are treated like the tenant-isolation tests: a failure is a defect, not a
+# warning.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # Config is validated at startup and the process refuses to boot without it
+  # (17 §3), so CI must supply it.
+  ISSUER_URL: http://localhost:3000
+  NODE_ENV: test
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: Lint
+        run: pnpm lint
+
+      # A rule that is configured but silently not firing is worse than no rule,
+      # because it creates false confidence. This runs the guards against fixtures
+      # that deliberately violate them.
+      - name: Verify architecture lint guards fire
+        run: pnpm verify:lint-rules
+
+      # Recomputes every token pair. Two WCAG failures were found this way in
+      # Phase 0.5 (docs/design/04 §7); this stops them returning.
+      - name: Contrast gates (WCAG 2.1 AA)
+        run: pnpm check:contrast
+
+      - name: Unit and component tests
+        run: pnpm test
+
+      - name: Build
+        run: pnpm build
+
+  e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build
+      - name: Install Playwright browsers
+        run: pnpm --filter @cp/web exec playwright install --with-deps chromium
+      # Covers CSP (D-1, D-2, D-9), self-hosted fonts, light/dark tokens, the
+      # no-hardcoded-products assertion, and axe on every route in both themes.
+      - name: End-to-end tests
+        run: pnpm test:e2e -- --project=chromium
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-report
+          path: apps/web/playwright-report/
+          retention-days: 7
+
+  security:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+
+      # 15 §14 — build fails on high or critical.
+      - name: Dependency audit
+        run: pnpm audit --audit-level=high
+
+      # The realistic leak path is an accidental commit, not an attacker (15 §5).
+      - name: Secret scan
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

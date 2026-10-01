@@ -1,0 +1,10 @@
+packages:
+  - 'apps/*'
+  - 'packages/*'
+
+# esbuild (a Vite/Vitest transitive dependency) needs its postinstall script to
+# fetch the platform binary. Allowlisted explicitly rather than globally enabling
+# build scripts, which would run every dependency's postinstall — a supply-chain
+# surface (docs/architecture/15-security-architecture.md §14).
+onlyBuiltDependencies:
+  - esbuild
