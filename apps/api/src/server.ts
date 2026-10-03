@@ -7,6 +7,7 @@
 
 import { buildApp } from './app.js'
 import { loadConfig } from './config.js'
+import { closeDb } from './db.js'
 
 const env = loadConfig() // exits non-zero on invalid config
 const app = await buildApp(env)
@@ -23,6 +24,7 @@ async function shutdown(signal: string): Promise<void> {
 
   try {
     await app.close() // stops accepting, drains in-flight requests
+    await closeDb() // close the pool after requests have drained
     app.log.info('shutdown complete')
     process.exit(0)
   } catch (err) {

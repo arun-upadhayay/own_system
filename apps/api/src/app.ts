@@ -8,10 +8,13 @@
  */
 
 import Fastify, { type FastifyInstance } from 'fastify'
-import { isAppError, isUuid, newCorrelationId, type CorrelationId } from '@cp/core'
+import { isAppError, isUuid, newCorrelationId, type CorrelationId, type Clock } from '@cp/core'
 import type { ApiEnv } from './config.js'
 import { loggerOptions } from './logger.js'
 import { registerHealthRoutes } from './routes/health.js'
+import { getDb } from './db.js'
+import { registerIdentityModule } from './modules/identity/index.js'
+import type { EmailPort } from './modules/identity/application/context.js'
 
 declare module 'fastify' {
   interface FastifyRequest {
@@ -29,7 +32,13 @@ function isValidationError(error: unknown): error is { validation: unknown[] } {
   )
 }
 
-export async function buildApp(env: ApiEnv): Promise<FastifyInstance> {
+/** Overrides for testing — e.g. a capturing email port or a fixed clock. */
+export interface BuildAppOverrides {
+  email?: EmailPort
+  clock?: Clock
+}
+
+export async function buildApp(env: ApiEnv, overrides: BuildAppOverrides = {}): Promise<FastifyInstance> {
   const app = Fastify({
     logger: loggerOptions(env),
     /**
@@ -130,6 +139,17 @@ export async function buildApp(env: ApiEnv): Promise<FastifyInstance> {
       },
     }),
   )
+
+  // Identity (Phase 3) registers only when the database is configured, so the
+  // pure-logic tests that build the app without a DB still work (AR-003).
+  if (env.DATABASE_URL && env.JWK_ENCRYPTION_KEY) {
+    await registerIdentityModule(app, {
+      db: getDb(env),
+      env,
+      ...(overrides.email ? { email: overrides.email } : {}),
+      ...(overrides.clock ? { clock: overrides.clock } : {}),
+    })
+  }
 
   await registerHealthRoutes(app, env)
 

@@ -146,6 +146,8 @@ Phase 10 is highlighted: it contains the platform's most security-critical write
 
 ## Phase 3 — Identity and authentication
 
+**Status: COMPLETE** (2026-10-04) — in-house OIDC-conformant authorization server in `apps/api/src/modules/identity`. argon2id, jose-signed RS256 tokens, refresh rotation with per-family reuse detection, enumeration-resistant login + lockout, password reset, OIDC discovery/JWKS/authorize+PKCE/token/userinfo/revoke/end-session. 27 API tests pass against Neon. Refinements in `22-change-log.md` AR-010.
+
 **Goal.** Central identity with OIDC-conformant endpoints.
 
 **Dependencies.** Phase 2.

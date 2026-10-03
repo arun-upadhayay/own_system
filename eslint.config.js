@@ -134,9 +134,14 @@ export default tseslint.config(
     },
   },
 
-  // The domain layer is pure: no framework, no I/O (HLD §3).
+  // The domain layer is pure: no framework, no I/O (HLD §3). Modules live inside
+  // apps/api (the standalone backend) as bounded units; the rule follows them there.
   {
-    files: ['packages/modules/*/domain/**/*.ts', 'packages/core/src/**/*.ts'],
+    files: [
+      'packages/modules/*/domain/**/*.ts',
+      'apps/api/src/modules/*/domain/**/*.ts',
+      'packages/core/src/**/*.ts',
+    ],
     rules: {
       'no-restricted-imports': [
         'error',

@@ -353,6 +353,20 @@ Both amendments are recorded in `22-change-log.md` AR-007, never applied silentl
 
 ---
 
+## ADR-033 — argon2id via @node-rs/argon2; modules live inside apps/api
+
+**Status:** Accepted (Phase 3)
+
+**Decision.** Password hashing uses **argon2id** (ADR-003 constraint 1, unchanged) via the **`@node-rs/argon2`** package — a prebuilt Rust binary — rather than the node-gyp `argon2`. And the bounded modules (identity first) live at **`apps/api/src/modules/<name>/`**, not `packages/modules/`, keeping the backend a single self-contained deployable.
+
+**Reason.** `@node-rs/argon2` installs reliably across platforms without a build toolchain (it shipped a working win32 binary immediately here), and argon2id is its default variant, so the algorithm requirement is met with less operational risk. Putting modules inside `apps/api` keeps the standalone Node.js backend one deployable unit — the user's explicit requirement — while preserving the module architecture: `domain/application/infrastructure/http` layering, the domain-purity lint rule (extended to `apps/api/src/modules/*/domain`), and the extraction path of ADR-001. Physical location does not change the logical module boundaries.
+
+**Alternatives.** node-gyp `argon2` — rejected: native build fragility on Windows/CI. `packages/modules/identity` as a separate workspace package (HLD §4's sketch) — rejected for now: more wiring and a second build graph for no gain, and it would blur "one deployable backend"; a module can still be extracted to a package later along its existing interface.
+
+**Consequences.** `verbatimModuleSyntax` forbids importing `@node-rs/argon2`'s `Algorithm` const enum, so the argon2id default is relied upon and documented. If a module is later extracted for independent deployment, it moves to `packages/modules/` unchanged in shape.
+
+---
+
 ## Deferred decisions
 
 Recorded so that their absence is a visible, deliberate choice rather than an oversight.

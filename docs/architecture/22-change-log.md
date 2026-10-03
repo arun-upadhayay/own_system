@@ -111,6 +111,36 @@ This is the third time the CSP has been corrected (D-1, D-2, D-9). The pattern i
 
 ---
 
+## AR-010 — Phase 3 implementation: identity and authentication
+
+| Field | Value |
+|---|---|
+| **Date** | 2026-10-04 |
+| **Type** | Implementation; amends ERD §11/§13 (audit FK), adds ADR-033 |
+| **Scope** | `apps/api` identity module — the highest-stakes subsystem (ADR-003) |
+| **Outcome** | In-house OIDC-conformant auth server, live on Neon; 27 API tests pass |
+
+**Change.** The identity subsystem is implemented inside the standalone backend (`apps/api/src/modules/identity`, layered domain/application/infrastructure/http). It delivers registration + email verification, enumeration-resistant login with per-account lockout, session management, refresh-token rotation with per-family reuse detection (ADR-017), password reset, organization selection, and the OIDC/OAuth 2.1 endpoints (discovery, JWKS, authorize+PKCE, token, userinfo, revoke, end-session). argon2id via `@node-rs/argon2`; all JWT/JWKS via `jose`; signing keys in `jwks_keys`, private keys AES-256-GCM encrypted at rest. The API now connects as `app_role` (RLS applies) and `/readyz` probes the database.
+
+### Decisions recorded as ADR-033
+- **argon2id via `@node-rs/argon2`** (prebuilt binary) rather than node-gyp `argon2` — reliable cross-platform install; argon2id is the default variant.
+- **Modules live in `apps/api/src/modules/`**, not `packages/modules/`, keeping the backend one deployable unit (the user's requirement). Logical module architecture and the domain-purity lint rule are preserved.
+
+### Bugs found and fixed while testing against the live database
+| # | Bug | Fix |
+|---|---|---|
+| P3-1 | Org slug built from `uuidv7().slice(0,8)` — v7's leading bytes are the timestamp, so registrations in the same moment collided on `organizations_slug_unique` | Random suffix (`randomBytes`) |
+| P3-2 (amends ERD §11/§13) | `audit_logs.actor_user_id` FK's `ON DELETE SET NULL` is an UPDATE on `audit_logs`, which the append-only trigger (0016) forbids — so deleting a user failed | **Dropped the FK** (migration 0018). An append-only, long-retention log should have no referential coupling into it; the denormalized `actor_label` already preserves readability |
+| P3-3 | Refresh issued the new token before consuming the old, briefly creating two live tokens → violated the one-live-token-per-family unique index (ADR-017) → 500 | Consume first, then issue; same fix applied to organization-switch |
+| P3-4 | Reuse-detection revoked the session **inside** the transaction that then threw, rolling the revoke back — so the family stayed alive | The use case returns a discriminated result; the failure is thrown **after** the transaction commits, so the revoke persists |
+| P3-5 | A per-email login rate limit collided with per-account lockout (both at 5) | Login is rate-limited per-IP only; account lockout is the per-account defense |
+
+**Deferred within Phase 3 (seams in place).** MFA (schema + `amr` claim present, mechanism off, ADR-D5); the browser-cookie authorization-server session for product SSO (the PKCE code/exchange mechanics are complete; full web-tier session linkage lands with product integration, Phase 17); a real email provider (dev logs; delivery runs off the outbox). Permissions in the access token are an empty set with a working `perm_digest` seam until RBAC (Phase 5).
+
+**Validation.** 27 API tests pass (14 foundation + 13 identity integration against Neon): enumeration resistance, lockout, refresh rotation + reuse → family revocation, reset single-use + session revocation, PKCE round trip + bad-verifier rejection, exact-match redirect URIs, discovery/JWKS. Live boot confirmed: the process starts, loads/creates a signing key from the DB, and serves OIDC with no private key in JWKS. Workspace typecheck, lint, build, contrast (28/28) and lint guards green. Secrets remain in gitignored `.env`.
+
+---
+
 ## AR-009 — Phase 2 implementation: database foundation on Neon, and the refinements it forced
 
 | Field | Value |

@@ -46,10 +46,89 @@ export interface UserCredentialsTable {
   user_id: string
   password_hash: string
   algorithm: string
-  password_changed_at: Timestamptz
+  password_changed_at: Generated<Timestamptz>
   must_change_password: Generated<boolean>
   created_at: CreatedAt
   updated_at: UpdatedAt
+}
+
+export interface MfaFactorsTable {
+  id: Generated<string>
+  user_id: string
+  type: string
+  secret_encrypted: string | null
+  credential_id: string | null
+  public_key: string | null
+  label: string | null
+  confirmed_at: Timestamptz | null
+  last_used_at: Timestamptz | null
+  created_at: CreatedAt
+}
+
+export interface OidcClientsTable {
+  id: Generated<string>
+  product_id: string | null
+  client_id: string
+  client_secret_hash: string | null
+  name: string
+  redirect_uris: string[]
+  post_logout_redirect_uris: Generated<string[]>
+  grant_types: Generated<string[]>
+  require_pkce: Generated<boolean>
+  access_token_ttl_seconds: Generated<number>
+  refresh_token_ttl_seconds: Generated<number>
+  status: Generated<string>
+  created_at: CreatedAt
+  updated_at: UpdatedAt
+}
+
+export interface JwksKeysTable {
+  kid: string
+  public_key: string
+  private_key_encrypted: string
+  algorithm: Generated<string>
+  status: Generated<string>
+  activated_at: Generated<Timestamptz>
+  retires_at: Timestamptz | null
+}
+
+export interface PasswordResetTokensTable {
+  id: Generated<string>
+  user_id: string
+  token_hash: string
+  expires_at: Timestamptz
+  used_at: Timestamptz | null
+  created_at: CreatedAt
+}
+
+export interface EmailVerificationTokensTable {
+  id: Generated<string>
+  user_id: string
+  email: string
+  token_hash: string
+  expires_at: Timestamptz
+  used_at: Timestamptz | null
+  created_at: CreatedAt
+}
+
+export interface AuthorizationCodesTable {
+  id: Generated<string>
+  code_hash: string
+  client_id: string
+  user_id: string
+  organization_id: string | null
+  redirect_uri: string
+  code_challenge: string
+  scope: string | null
+  expires_at: Timestamptz
+  used_at: Timestamptz | null
+  created_at: CreatedAt
+}
+
+export interface RateLimitCountersTable {
+  key: string
+  window_start: Timestamptz
+  count: Generated<number>
 }
 
 export interface SessionsTable {
@@ -487,6 +566,13 @@ export interface DB {
   user_credentials: UserCredentialsTable
   sessions: SessionsTable
   refresh_tokens: RefreshTokensTable
+  mfa_factors: MfaFactorsTable
+  oidc_clients: OidcClientsTable
+  jwks_keys: JwksKeysTable
+  password_reset_tokens: PasswordResetTokensTable
+  email_verification_tokens: EmailVerificationTokensTable
+  authorization_codes: AuthorizationCodesTable
+  rate_limit_counters: RateLimitCountersTable
 
   organizations: OrganizationsTable
   branches: BranchesTable
