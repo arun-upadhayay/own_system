@@ -1,0 +1,38 @@
+{
+  "name": "@cp/db",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run --passWithNoTests",
+    "db:probe": "tsx src/scripts/probe.ts",
+    "db:migrate": "tsx src/scripts/migrate.ts up",
+    "db:status": "node --experimental-strip-types src/scripts/migrate.ts status",
+    "db:migrate:status": "tsx src/scripts/migrate.ts status"
+  },
+  "dependencies": {
+    "@cp/core": "workspace:*",
+    "kysely": "^0.28.8",
+    "pg": "^8.16.3"
+  },
+  "devDependencies": {
+    "@types/pg": "^8.15.5",
+    "tsx": "^4.20.6",
+    "typescript": "^5.9.3",
+    "vitest": "^3.2.4"
+  }
+}

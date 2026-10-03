@@ -229,9 +229,16 @@ export default tseslint.config(
     },
   },
 
-  // Config and script files run in Node and may log.
+  // Config files and CLI scripts run in Node and legitimately log to the console
+  // (migration runners, probes). This covers root scripts and per-package
+  // `src/scripts/` CLIs (e.g. @cp/db's migrate/probe/verify-schema).
   {
-    files: ['*.config.{js,ts,mjs}', 'scripts/**/*.mjs', 'eslint-rules/**/*.js'],
+    files: [
+      '*.config.{js,ts,mjs}',
+      'scripts/**/*.mjs',
+      '**/scripts/**/*.ts',
+      'eslint-rules/**/*.js',
+    ],
     rules: {
       'no-console': 'off',
       '@typescript-eslint/no-explicit-any': 'off',

@@ -111,6 +111,47 @@ This is the third time the CSP has been corrected (D-1, D-2, D-9). The pattern i
 
 ---
 
+## AR-009 — Phase 2 implementation: database foundation on Neon, and the refinements it forced
+
+| Field | Value |
+|---|---|
+| **Date** | 2026-10-03 |
+| **Type** | Implementation + environment-driven refinements; amends ERD §13.1, §14, §1.0 notes |
+| **Scope** | `@cp/db` — schema, migrations, guards, RLS, repositories, audit/outbox, tests |
+| **Outcome** | Full schema live on Neon (39 app tables); 15 integration tests pass; **4 refinements recorded** |
+
+**Change.** Phase 2 was implemented against the provided Neon PostgreSQL instance. The full ERD is migrated (17 forward-only migrations), the composite guards, RLS and the append-only audit log are in place, and an integration suite verifies the security invariants in rolled-back transactions. Running it against a real managed Postgres surfaced four things documentation could not.
+
+### Environment finding: PostgreSQL 18.6, not 16
+
+The instance is **18.6**. PG 18 has a native `uuidv7()`, but the ERD (§1.0) deliberately generates ids in the application so the schema stays portable to 16/17. **That decision stands** — app-side `uuidv7()` is used, no `gen_random_uuid()` defaults — so the platform is not pinned to an 18-only feature. Recorded, not changed.
+
+### R2-1 — FK targets must be unique CONSTRAINTS, not bare unique indexes (amends ERD §13.1)
+
+The ERD sketched the referenceable `(id, scope)` pairs as `CREATE UNIQUE INDEX`. PostgreSQL requires a foreign-key target to be a unique **constraint** (or PK), not merely a unique index, so those are now `ALTER TABLE … ADD CONSTRAINT … UNIQUE (id, scope)`. Functionally identical (a unique constraint is backed by a unique index), but it is what makes the composite guards referenceable. Grandparent agreements (plan↔feature, override↔subscription, role↔permission product) are `CONSTRAINT TRIGGER`s, `DEFERRABLE INITIALLY IMMEDIATE`, as the ERD specified.
+
+### R2-2 — the app connects as a non-bypass role; the owner has BYPASSRLS (amends ERD §14, 15 §3)
+
+Neon's `neondb_owner` has `rolbypassrls = true`, which **overrides `FORCE ROW LEVEL SECURITY`**. Connecting the application as the owner would make RLS inert. This is a push toward the *more* correct design that §15 §3 already intended: the runtime and the RLS tests connect as **`app_role`** (login enabled, `rolbypassrls = false`), so RLS genuinely applies; **migrations** run as the owner (trusted DDL). `FORCE RLS` is kept as defense in depth. The `app_role` credential lives only in a gitignored `.env`.
+
+Consequence for a later phase: when `apps/api` wires to the database (Phase 3), it connects via the `app_role` URL, not the owner URL. The owner URL is for migrations only.
+
+### R2-3 — RLS policies must tolerate an unset tenant setting (amends ERD §14)
+
+`set_config('app.current_organization_id', NULL)` stores an **empty string**, and `''::uuid` raises `string_to_uuid`. A request that cleared its scope would error instead of returning no rows. The tenant policies now wrap the setting in `NULLIF(current_setting('app.current_organization_id', true), '')::uuid` (migration 0017), so both unset (NULL) and cleared ('') resolve to NULL → the comparison is false → no rows. This is the behaviour the "unscoped query sees nothing" test asserts.
+
+### R2-4 — audit append-only is enforced by a trigger, not only by GRANT revocation (amends ERD §11.1)
+
+Because the owner bypasses table privileges, `REVOKE UPDATE, DELETE ON audit_logs FROM app_role` alone would not stop the owner rewriting the log. A `BEFORE UPDATE/DELETE` trigger enforces append-only **regardless of connecting role**, unless an explicit `app.allow_audit_maintenance` flag is set (for the retention job). Both mechanisms are present: the REVOKE is the app-facing boundary (tested: `app_role` gets "permission denied"), the trigger is the owner/retention backstop.
+
+**Tooling note.** `tsx` (dev-only) runs the migration/probe CLIs: Node's `--experimental-strip-types` does not remap `.js` specifiers to `.ts`, and the source uses `.js` specifiers because `@cp/db` and `@cp/core` ship compiled ESM consumed by the Node backend (`apps/api`).
+
+**Validation.** All 16 migrations apply and are idempotent; schema verification counts 39 app tables, 15 FORCE-RLS tables, the critical plan/product guard, the view, and all 5 guard/append-only triggers; 15 integration tests pass (tenant isolation, composite guards incl. R-5, partial unique indexes, append-only, outbox atomicity, view states). Workspace typecheck, lint, build, contrast (28/28) and lint-guard checks all green.
+
+**Impact.** Phase 2 complete. The backend remains a standalone deployable Node.js service (`apps/api` + `@cp/core`/`@cp/db`). The `app_role` login credential and the Neon URLs are local-only secrets; **the user should rotate the database password that was shared in chat.**
+
+---
+
 ## AR-007 — Phase 0.5: design system, and the architecture amendments it forced
 
 | Field | Value |

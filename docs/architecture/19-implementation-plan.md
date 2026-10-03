@@ -109,6 +109,8 @@ Phase 10 is highlighted: it contains the platform's most security-critical write
 
 ## Phase 2 — Database foundation
 
+**Status: COMPLETE** (2026-10-03) — implemented in `@cp/db` against a Neon PostgreSQL 18.6 instance. 17 forward-only migrations, 39 app tables, RLS on 15 tables (connecting as the non-bypass `app_role`), composite guards, append-only audit, and a 15-test integration suite. Environment-driven refinements recorded in `22-change-log.md` AR-009.
+
 **Goal.** Full schema, migrations, typed query layer, tenant-scoping primitives.
 
 **Dependencies.** Phase 1; **a reachable Postgres**.
