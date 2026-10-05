@@ -7,8 +7,8 @@ export default defineConfig({
     include: ['src/**/*.test.ts'],
     // Identity integration tests hash passwords (argon2) and hit Neon in us-east-2;
     // give them room. Pure-logic tests remain fast.
-    testTimeout: 30_000,
-    hookTimeout: 40_000,
+    testTimeout: 60_000,
+    hookTimeout: 60_000,
     fileParallelism: false,
   },
 })

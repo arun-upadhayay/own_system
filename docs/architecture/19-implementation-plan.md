@@ -184,6 +184,8 @@ Phase 10 is highlighted: it contains the platform's most security-critical write
 
 ## Phase 4 — Organizations, branches, memberships
 
+**Status: COMPLETE** (2026-10-05) — tenant self-management in `apps/api/src/modules/organizations`: org read/update (descriptive only), branches with one-primary, memberships (suspend/reinstate/remove, branch scope, transfer-ownership) with last-owner protection and session revocation, and invitations (create/list/revoke/preview/accept) incl. new-user and existing-user multi-org join. Organization context comes only from the token (404-not-403 cross-tenant). 12 org tests pass against Neon (39 API total). See `22-change-log.md` AR-011.
+
 **Goal.** Tenancy with structurally enforced isolation.
 
 **Dependencies.** Phase 3.

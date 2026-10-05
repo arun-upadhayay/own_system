@@ -14,6 +14,7 @@ import { loggerOptions } from './logger.js'
 import { registerHealthRoutes } from './routes/health.js'
 import { getDb } from './db.js'
 import { registerIdentityModule } from './modules/identity/index.js'
+import { registerOrganizationsModule } from './modules/organizations/index.js'
 import type { EmailPort } from './modules/identity/application/context.js'
 
 declare module 'fastify' {
@@ -143,9 +144,16 @@ export async function buildApp(env: ApiEnv, overrides: BuildAppOverrides = {}): 
   // Identity (Phase 3) registers only when the database is configured, so the
   // pure-logic tests that build the app without a DB still work (AR-003).
   if (env.DATABASE_URL && env.JWK_ENCRYPTION_KEY) {
-    await registerIdentityModule(app, {
-      db: getDb(env),
+    const db = getDb(env)
+    const identity = await registerIdentityModule(app, {
+      db,
       env,
+      ...(overrides.email ? { email: overrides.email } : {}),
+      ...(overrides.clock ? { clock: overrides.clock } : {}),
+    })
+    registerOrganizationsModule(app, {
+      db,
+      tokens: identity.tokens,
       ...(overrides.email ? { email: overrides.email } : {}),
       ...(overrides.clock ? { clock: overrides.clock } : {}),
     })

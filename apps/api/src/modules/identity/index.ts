@@ -53,4 +53,7 @@ export async function registerIdentityModule(
 }
 
 export { TokenService } from './infrastructure/token-service.js'
-export type { IdentityContext } from './application/context.js'
+export type { IdentityContext, EmailPort } from './application/context.js'
+export { ConsoleEmail } from './application/context.js'
+
+export { provisionInvitedUser, revokeUserSessions } from './services.js'

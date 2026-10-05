@@ -32,7 +32,10 @@ export const OrgScope = {
    * an organization id taken from a request body, query or path (ADR-012).
    */
   fromVerifiedToken(organizationId: OrganizationId): OrgScope {
-    return { organizationId, [scopeBrand]: 'OrgScope' } as OrgScope
+    // The brand is a PHANTOM (compile-time-only) marker — the symbol is a
+    // `declare const`, not a runtime value — so the object carries only its real
+    // `organizationId` and is cast to the branded type.
+    return { organizationId } as unknown as OrgScope
   },
 } as const
 
@@ -50,6 +53,7 @@ export interface PlatformScope {
 export const PlatformScope = {
   /** Construct only after a platform-scoped permission check has passed. */
   fromVerifiedPlatformGrant(): PlatformScope {
-    return { [platformBrand]: 'PlatformScope' } as PlatformScope
+    // Phantom brand — nothing at runtime; the marker exists only in the type.
+    return {} as unknown as PlatformScope
   },
 } as const

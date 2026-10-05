@@ -111,6 +111,34 @@ This is the third time the CSP has been corrected (D-1, D-2, D-9). The pattern i
 
 ---
 
+## AR-011 — Phase 4 implementation: organizations, branches, memberships
+
+| Field | Value |
+|---|---|
+| **Date** | 2026-10-05 |
+| **Type** | Implementation |
+| **Scope** | `apps/api/src/modules/organizations` — tenant self-management |
+| **Outcome** | Organization/branch/membership/invitation management, live on Neon; 12 module tests pass (39 API total) |
+
+**Change.** The organization self-management surface is implemented as a second bounded module inside the standalone backend (domain/application/http), depending on identity only through its public interface (HLD §4.1):
+
+- **Organization**: read + update of descriptive settings only. Status transitions (suspend/cancel/reinstate) are company-controlled (baseline §20) and are **not** accepted fields here; the org never raises its own limits.
+- **Branches**: list/create/update/delete with the one-primary-per-org rule (unset-then-set so the partial unique index never transiently breaks). The branch *limit* (MAX across subscriptions) is deferred to Phase 10 with the rest of limit enforcement, per plan.
+- **Memberships**: list, suspend/reinstate/remove, branch-scope management, transfer-ownership. **Last-owner protection** (the last active owner cannot be suspended/removed/demoted) and **immediate session revocation** on suspend/remove (requested from identity through its public `revokeUserSessions`). Removal releases the member's product seats (full enforcement Phase 10).
+- **Invitations**: create (one pending per org+email), list, revoke, public preview, and accept — for a brand-new user (provisioned verified, since the invite proves the email) and for an existing authenticated user joining a second organization (baseline §8 multi-org).
+
+**Tenant isolation.** The acting organization comes only from the verified token's `org` claim, never from a request body; a path org id must equal it, and a mismatch is **404, not 403** (07 §9). Org-owned work runs under `withOrgScope`, so RLS is the defense-in-depth layer beneath the token scope.
+
+**Authorization (interim).** Phase 4 gates management on membership ownership (`is_owner`); Phase 5 (RBAC) replaces this with the `organization.*` permission set and the org_admin role, at which point the route-declared permissions become the real check. Reads require active membership; mutations require ownership.
+
+**New in the identity public interface (HLD §4.1).** `provisionInvitedUser` (create a verified user on invitation acceptance) and `revokeUserSessions` (used by the org module on member suspend/remove), plus the `EmailPort`/`ConsoleEmail` exports, moved into `identity/services.ts` and re-exported from the module index.
+
+**Fix found while testing.** The branded `OrgScope`/`PlatformScope` constructors used their phantom brand symbol as a *runtime* object key (`[scopeBrand]: …`), but the symbol is a type-only `declare const` → `ReferenceError: scopeBrand is not defined` at runtime. The brand is now purely compile-time; the constructors return the real fields cast to the branded type. (This also means `packages/core` was rebuilt so `dist` matches.)
+
+**Validation.** 12 organization tests pass against Neon — tenant isolation per resource (404-not-403), org context only from the token, one-primary branch, ownership-gated management, last-owner protection, new-user and existing-user invitation acceptance, duplicate-invitation rejection. Full API suite 39/39; workspace typecheck, lint, build, contrast (28/28), lint guards green. Integration-test timeout raised to 60s (argon2 + Neon latency make full flows slow). Secrets remain in gitignored `.env`.
+
+---
+
 ## AR-010 — Phase 3 implementation: identity and authentication
 
 | Field | Value |
