@@ -6,9 +6,9 @@
 
 import type { FastifyInstance } from 'fastify'
 import { z } from 'zod'
-import { requireIdentity, type Identity } from '../../identity/http/auth-middleware.js'
+import { requireIdentity, type Identity } from '../../identity/index.js'
 import type { TokenService } from '../../identity/index.js'
-import { makeAuthenticate } from '../../identity/http/auth-middleware.js'
+import { makeAuthenticate } from '../../identity/index.js'
 import type { OrgModuleContext } from '../application/context.js'
 import { requireMember, requireManage } from './org-context.js'
 import { parseBody, translateOrgError } from './errors.js'

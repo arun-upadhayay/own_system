@@ -55,5 +55,8 @@ export async function registerIdentityModule(
 export { TokenService } from './infrastructure/token-service.js'
 export type { IdentityContext, EmailPort } from './application/context.js'
 export { ConsoleEmail } from './application/context.js'
+// Authentication middleware, exposed so other modules gate routes without reaching
+// into identity's internals (HLD §4.1).
+export { makeAuthenticate, requireIdentity, type Identity } from './http/auth-middleware.js'
 
 export { provisionInvitedUser, revokeUserSessions } from './services.js'

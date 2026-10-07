@@ -17,6 +17,7 @@ import { m0015_rls } from './m0015_rls.js'
 import { m0016_audit_privileges } from './m0016_audit_privileges.js'
 import { m0017_rls_nullif } from './m0017_rls_nullif.js'
 import { m0018_audit_no_user_fk } from './m0018_audit_no_user_fk.js'
+import { m0019_rbac_seed } from './m0019_rbac_seed.js'
 
 /**
  * Migration registry, in the mandated order (plan Phase 2):
@@ -42,4 +43,5 @@ export const migrations: Record<string, Migration> = {
   '0016_audit_privileges': m0016_audit_privileges,
   '0017_rls_nullif': m0017_rls_nullif,
   '0018_audit_no_user_fk': m0018_audit_no_user_fk,
+  '0019_rbac_seed': m0019_rbac_seed,
 }
